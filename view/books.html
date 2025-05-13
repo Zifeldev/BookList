@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Books List</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 80%;
+      margin-bottom: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    th {
+      background: #f4f4f4;
+    }
+    form {
+      margin-top: 20px;
+    }
+    input {
+      padding: 5px;
+      margin: 5px;
+    }
+    button {
+      padding: 5px 10px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Books</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th><th>Title</th><th>Author</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="bookTableBody"></tbody>
+  </table>
+
+  <h2>Add a Book</h2>
+  <form id="bookForm">
+    <input type="text" id="title" placeholder="Title" required>
+    <input type="text" id="author" placeholder="Author" required>
+    <button type="submit">Add Book</button>
+  </form>
+
+  <script>
+    function loadBooks() {
+      fetch("/books")
+        .then(response => response.json())
+        .then(books => {
+          const tbody = document.getElementById("bookTableBody");
+          tbody.innerHTML = "";
+          books.forEach(book => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${book.id}</td>
+              <td class="title">${book.title}</td>
+              <td class="author">${book.author}</td>
+              <td>
+                <button onclick="editBook(${book.id}, this)">Edit</button>
+                <button onclick="deleteBook(${book.id})">Delete</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        });
+    }
+
+    function editBook(id, button) {
+      const row = button.closest("tr");
+      const titleCell = row.querySelector(".title");
+      const authorCell = row.querySelector(".author");
+
+      const currentTitle = titleCell.textContent;
+      const currentAuthor = authorCell.textContent;
+
+      titleCell.innerHTML = `<input type="text" value="${currentTitle}">`;
+      authorCell.innerHTML = `<input type="text" value="${currentAuthor}">`;
+
+      button.textContent = "Save";
+      button.onclick = () => saveBook(id, row, button);
+    }
+
+    function saveBook(id, row, button) {
+      const newTitle = row.querySelector(".title input").value;
+      const newAuthor = row.querySelector(".author input").value;
+
+      fetch(`/books/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle, author: newAuthor })
+      })
+      .then(res => {
+        if (res.ok) {
+          row.querySelector(".title").textContent = newTitle;
+          row.querySelector(".author").textContent = newAuthor;
+          button.textContent = "Edit";
+          button.onclick = () => editBook(id, button);
+        } else {
+          alert("Failed to update book");
+        }
+      });
+    }
+
+    function deleteBook(id) {
+      if (!confirm("Are you sure you want to delete this book?")) return;
+
+      fetch(`/books/${id}`, {
+        method: "DELETE"
+      })
+      .then(res => {
+        if (res.ok) {
+          loadBooks(); 
+        } else {
+          alert("Failed to delete book");
+        }
+      });
+    }
+
+    document.getElementById("bookForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const title = document.getElementById("title").value;
+      const author = document.getElementById("author").value;
+
+      fetch("/books", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, author })
+      })
+      .then(res => {
+        if (res.ok) {
+          loadBooks();
+          document.getElementById("bookForm").reset();
+        } else {
+          alert("Failed to add book");
+        }
+      });
+    });
+
+    loadBooks();
+  </script>
+</body>
+</html>
