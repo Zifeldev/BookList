@@ -3,10 +3,11 @@ package logic
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Book struct {
@@ -94,6 +95,7 @@ func UpdateBook(c *gin.Context) {
 		if book.ID == id {
 			books[index].Title = updatedBook.Title
 			books[index].Author = updatedBook.Author
+			books.Save()
 			c.JSON(http.StatusOK, books[index])
 			return
 		}
