@@ -1,11 +1,15 @@
 package logic
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
+	// "fmt"
 	"net/http"
 	"os"
 	"strconv"
+	"web-service-gin/db"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,19 +24,26 @@ type Booklist []Book
 
 var books Booklist
 
-func (b *Booklist) Load() {
-	data, err := os.ReadFile("db.json")
+func (b *Booklist) Load() error {
+	rows, err := db.Conn.Query(context.Background(), "SELECT id,title, author from books")
 	if err != nil {
-		fmt.Println("db not loaded...")
-		return
+		return fmt.Errorf("ошибка при загрузке книг: %v", err)
+	}
+	defer rows.Close()
+	books = []Book{}
 
+	for rows.Next() {
+		var b Book
+		if err := rows.Scan(&b.ID, &b.Title, &b.Author); err != nil {
+			return fmt.Errorf("ошибка при сканировании строки: %v", err)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("ошибка при обработке строк: %v", err)
+
+		}
 	}
-	err = json.Unmarshal(data, &b)
-	if err != nil {
-		panic(err)
-	}
+	return nil
 }
-
 func (b *Booklist) Save() {
 	data, err := json.Marshal(b)
 	if err != nil {
@@ -45,8 +56,13 @@ func (b *Booklist) Save() {
 }
 
 func GetBook(c *gin.Context) {
-	books.Load()
-	c.JSON(http.StatusOK, books)
+	if err := books.Load(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"message": "no books found"})
+	}
+	c.JSON(http.StatusOK,books)
 }
 
 func PostBook(c *gin.Context) {

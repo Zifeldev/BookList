@@ -1,6 +1,8 @@
 package main
 
 import (
+	// "fmt"
+	"web-service-gin/db"
 	"web-service-gin/logic"
 
 	"github.com/gin-gonic/gin"
@@ -8,6 +10,7 @@ import (
 
 
 func main() {
+	db.ConnectDB()
 	router := gin.Default()
 	router.GET("/books", logic.GetBook)
 	router.GET("/books/:id", logic.GetBookByID)
